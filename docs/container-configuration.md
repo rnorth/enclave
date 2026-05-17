@@ -1,13 +1,13 @@
-# Configuration and the per-user image
+# Configuration
 
 ## Config file
 
 enclave reads `~/.config/enclave/config.yaml`:
 
 ```yaml
-image: ghcr.io/catthehacker/ubuntu:act-latest    # required: base image
+# image: ghcr.io/your/own-base:tag             # optional: override the curated base image
 
-networkPolicies:                                  # optional
+networkPolicies:                                # optional
   - host: api.github.com
     policies:
       - action: ALLOW
@@ -15,24 +15,13 @@ networkPolicies:                                  # optional
         method: GET
 ```
 
-`image` is the only required key. `networkPolicies` follows the schema in [egress-control](./egress-control.md); if omitted or empty, enclave starts the proxy in default-deny mode and warns at startup.
+All keys are optional. If you supply no config file at all, enclave still exits 2 with an example — the file's existence remains a deliberate confirmation that you intend to use enclave here. `networkPolicies` follows the schema in [egress-control](./egress-control.md); if omitted or empty, enclave starts the proxy in default-deny mode and warns at startup.
 
-## Per-user image
-
-On first invocation, enclave builds a derivative of `config.image` with the host user baked in:
-
-- A user is created matching the host's UID/GID/name.
-- The home directory is `/home/<USER>`.
-- `USER` and `HOME` env vars are set.
-- The `gh` CLI is installed (apt-get; the base image must be Debian/Ubuntu-derived).
-
-The result is cached as `enclave-<USER>:<UID>`. Rebuilds are cheap once the layers are in Docker's cache. If your base image changes and you want to force a rebuild, `docker image rm enclave-<USER>:<UID>` clears the cache.
-
-The Dockerfile template that produces the derivative is intentionally small — user creation and the `gh` install. Anything else (language runtimes, other CLIs) is the responsibility of your base image.
+`image` is an escape hatch for users who want their own base. Omitted is the common case — see [container-image](./container-image.md) for what's in the default curated image and the bring-your-own-base contract.
 
 ## cwd mount
 
-The directory you invoke enclave from is bind-mounted at the same absolute path inside the container, read-write. Files created inside are owned by your host user.
+The directory you invoke enclave from is bind-mounted at the same absolute path inside the container, read-write. Files created inside are owned by your host user (see [container-image](./container-image.md) for the per-user UID/GID layer).
 
 There is no facility (yet) for additional mounts or environment variables. Those will land as further keys in `config.yaml` as the need arises.
 

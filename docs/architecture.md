@@ -16,7 +16,8 @@
 enclave -- pi
   ├── load + validate ~/.config/enclave/config.yaml
   ├── warn if no networkPolicies (default-deny in effect)
-  ├── build per-user image (cached as enclave-<user>:<uid>)
+  ├── build curated base image if missing (cached as enclave-base:dev)
+  ├── build per-user image on top (cached as enclave-<user>:<uid>)
   ├── docker create workload (cwd mounted, --user UID:GID)
   ├── docker create proxy (NET_ADMIN, shared netns, in-memory policy)
   ├── install proxy CA cert in workload, start audit-log tail → stderr
@@ -26,6 +27,7 @@ enclave -- pi
 
 ## Feature docs
 
-- **[CLI lifecycle and configuration](./container-configuration.md)** — config file schema, image build, cwd mount, host-user matching
-- **[Container sandbox](./container-sandbox.md)** — containment model, fail-closed behaviour
+- **[Configuration](./container-configuration.md)** — config file schema, cwd mount, environment overrides
+- **[Container image](./container-image.md)** — curated tool set, mise integration, two-stage image build, bring-your-own-base contract
+- **[Container sandbox](./container-sandbox.md)** — containment model, fail-closed behaviour, sandbox-bypass risks
 - **[Egress control](./egress-control.md)** — mitmproxy sidecar, policy format, limitations

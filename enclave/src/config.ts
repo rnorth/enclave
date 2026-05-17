@@ -22,7 +22,7 @@ const NetworkPolicySchema = z.object({
 });
 
 const ConfigSchema = z.object({
-  image: z.string().min(1, "image is required"),
+  image: z.string().min(1).optional(),
   networkPolicies: z.array(NetworkPolicySchema).optional(),
 });
 
@@ -45,7 +45,7 @@ export interface Config extends RawConfig {
   defaultDenyActive(): boolean;
 }
 
-const EXAMPLE_CONFIG = `image: ghcr.io/catthehacker/ubuntu:act-latest
+const EXAMPLE_CONFIG = `# image: ghcr.io/your/own-base:tag    # optional: override the curated base image
 
 # Optional. If omitted or empty, all outbound HTTP/HTTPS is blocked.
 networkPolicies:
@@ -71,6 +71,9 @@ export function loadConfig(path: string): Config {
     const cause = err instanceof Error ? err.message : String(err);
     throw new ConfigError("invalid", `${path}: malformed YAML: ${cause}`);
   }
+
+  // parseYaml returns null for an empty file; treat that as an empty config.
+  if (raw === null) raw = {};
 
   const result = ConfigSchema.safeParse(raw);
   if (!result.success) {
