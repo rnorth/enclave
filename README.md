@@ -1,4 +1,8 @@
-# tsuba
+<p align="center">
+  <img src="docs/logo.png" alt="tsuba logo" width="120"/>
+</p>
+
+<h1 align="center">tsuba</h1>
 
 Run any command inside an ephemeral Docker container, with optional egress filtering.
 
