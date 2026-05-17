@@ -1,10 +1,10 @@
 # Container sandbox
 
-enclave runs the user's program inside an ephemeral Docker container — *the whole program*, not just selected tool calls. There is no host-side execution path: if the container cannot start, enclave exits non-zero.
+tsuba runs the user's program inside an ephemeral Docker container — *the whole program*, not just selected tool calls. There is no host-side execution path: if the container cannot start, tsuba exits non-zero.
 
 ## Lifecycle
 
-One container per invocation. The container is created when enclave starts and destroyed when the program exits. There is no daemon, no shared state between invocations, and no session concept.
+One container per invocation. The container is created when tsuba starts and destroyed when the program exits. There is no daemon, no shared state between invocations, and no session concept.
 
 ## Working directory
 
@@ -22,8 +22,8 @@ Once the program is running inside `docker exec`, every subprocess it spawns —
 - Image build fails → exit 1.
 - Proxy fails to start → exit 1, workload is torn down first.
 
-There is no `--no-sandbox` opt-out. If you don't want a sandbox, don't use enclave.
+There is no `--no-sandbox` opt-out. If you don't want a sandbox, don't use tsuba.
 
 ## Sandbox-bypass risks (do not enable)
 
-The curated image includes the **Docker CLI client**. The client alone is harmless — it can't talk to anything without a Docker daemon socket on the other end. Specifically: **never mount `/var/run/docker.sock` into the workload container.** Doing so gives the sandboxed program full control of the host's Docker daemon, which trivially escalates to host root (e.g., `docker run -v /:/host …`). enclave does not currently expose a mounts configuration; if one is added in the future, the Docker socket must not be a casual config toggle. Treat it as out-of-band, requires-justification, separate-from-normal-mounts.
+The curated image includes the **Docker CLI client**. The client alone is harmless — it can't talk to anything without a Docker daemon socket on the other end. Specifically: **never mount `/var/run/docker.sock` into the workload container.** Doing so gives the sandboxed program full control of the host's Docker daemon, which trivially escalates to host root (e.g., `docker run -v /:/host …`). tsuba does not currently expose a mounts configuration; if one is added in the future, the Docker socket must not be a casual config toggle. Treat it as out-of-band, requires-justification, separate-from-normal-mounts.

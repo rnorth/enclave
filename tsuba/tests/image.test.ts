@@ -4,7 +4,7 @@
 
 import { describe, it, expect, afterAll } from "vitest";
 import { execSync } from "node:child_process";
-import { buildEnclaveImage, ensureEnclaveBaseImage, getHostUser, ENCLAVE_BASE_IMAGE_TAG } from "../src/image.js";
+import { buildTsubaImage, ensureTsubaBaseImage, getHostUser, TSUBA_BASE_IMAGE_TAG } from "../src/image.js";
 
 function isDockerAvailable(): boolean {
   try {
@@ -17,9 +17,9 @@ function isDockerAvailable(): boolean {
 
 const DOCKER_AVAILABLE = isDockerAvailable();
 
-describe.runIf(DOCKER_AVAILABLE)("buildEnclaveImage", { timeout: 600_000 }, () => {
+describe.runIf(DOCKER_AVAILABLE)("buildTsubaImage", { timeout: 600_000 }, () => {
   const user = getHostUser();
-  const expectedImage = `enclave-${user.name}:${user.uid}`;
+  const expectedImage = `tsuba-${user.name}:${user.uid}`;
 
   afterAll(() => {
     // best-effort cleanup; the cache is fine to keep across runs but
@@ -31,8 +31,8 @@ describe.runIf(DOCKER_AVAILABLE)("buildEnclaveImage", { timeout: 600_000 }, () =
     }
   });
 
-  it("builds an image named enclave-<user>:<uid>", async () => {
-    const built = await buildEnclaveImage("ubuntu:24.04");
+  it("builds an image named tsuba-<user>:<uid>", async () => {
+    const built = await buildTsubaImage("ubuntu:24.04");
     expect(built).toBe(expectedImage);
     expect(() =>
       execSync(`docker image inspect ${built}`, { stdio: "pipe" }),
@@ -40,7 +40,7 @@ describe.runIf(DOCKER_AVAILABLE)("buildEnclaveImage", { timeout: 600_000 }, () =
   });
 
   it("bakes in a user with the host UID/GID", async () => {
-    const built = await buildEnclaveImage("ubuntu:24.04");
+    const built = await buildTsubaImage("ubuntu:24.04");
     const out = execSync(
       `docker run --rm ${built} id -u`,
       { stdio: ["pipe", "pipe", "pipe"] },
@@ -48,38 +48,38 @@ describe.runIf(DOCKER_AVAILABLE)("buildEnclaveImage", { timeout: 600_000 }, () =
     expect(out).toBe(String(user.uid));
   });
 
-  it("ensureEnclaveBaseImage builds enclave-base:latest when missing", async () => {
+  it("ensureTsubaBaseImage builds tsuba-base:latest when missing", async () => {
     // Force-clean the curated image so the test exercises the build path.
     try {
-      execSync(`docker image rm -f enclave-base:latest`, { stdio: "pipe" });
+      execSync(`docker image rm -f ${TSUBA_BASE_IMAGE_TAG}`, { stdio: "pipe" });
     } catch {
       // ignore — may not exist
     }
-    await ensureEnclaveBaseImage();
+    await ensureTsubaBaseImage();
     expect(() =>
-      execSync(`docker image inspect enclave-base:latest`, { stdio: "pipe" }),
+      execSync(`docker image inspect ${TSUBA_BASE_IMAGE_TAG}`, { stdio: "pipe" }),
     ).not.toThrow();
   });
 
-  it("ensureEnclaveBaseImage is a no-op when the image already exists", async () => {
+  it("ensureTsubaBaseImage is a no-op when the image already exists", async () => {
     // The previous test left it present.
-    const before = execSync(`docker image inspect -f '{{.Id}}' enclave-base:latest`, { stdio: ["pipe", "pipe", "pipe"] }).toString().trim();
-    await ensureEnclaveBaseImage();
-    const after = execSync(`docker image inspect -f '{{.Id}}' enclave-base:latest`, { stdio: ["pipe", "pipe", "pipe"] }).toString().trim();
+    const before = execSync(`docker image inspect -f '{{.Id}}' ${TSUBA_BASE_IMAGE_TAG}`, { stdio: ["pipe", "pipe", "pipe"] }).toString().trim();
+    await ensureTsubaBaseImage();
+    const after = execSync(`docker image inspect -f '{{.Id}}' ${TSUBA_BASE_IMAGE_TAG}`, { stdio: ["pipe", "pipe", "pipe"] }).toString().trim();
     expect(after).toBe(before);
   });
 
-  it("buildEnclaveImage without explicit baseImage builds using the curated base", async () => {
-    const built = await buildEnclaveImage();
+  it("buildTsubaImage without explicit baseImage builds using the curated base", async () => {
+    const built = await buildTsubaImage();
     expect(built).toBe(expectedImage);
     // The curated base should be present as a side-effect
     expect(() =>
-      execSync(`docker image inspect ${ENCLAVE_BASE_IMAGE_TAG}`, { stdio: "pipe" }),
+      execSync(`docker image inspect ${TSUBA_BASE_IMAGE_TAG}`, { stdio: "pipe" }),
     ).not.toThrow();
   });
 
   it("default (no baseImage) chains curated build and produces an image with the curated tool set", async () => {
-    const built = await buildEnclaveImage();
+    const built = await buildTsubaImage();
     expect(built).toBe(expectedImage);
 
     // The resulting per-user image should carry the curated tool set
@@ -97,7 +97,7 @@ describe.runIf(DOCKER_AVAILABLE)("buildEnclaveImage", { timeout: 600_000 }, () =
   });
 
   it("login shell is bash and mise shims are on PATH", async () => {
-    const built = await buildEnclaveImage();
+    const built = await buildTsubaImage();
     const shell = execSync(
       `docker run --rm ${built} getent passwd ${user.name}`,
       { stdio: ["pipe", "pipe", "pipe"] },

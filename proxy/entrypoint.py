@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Entrypoint for the sandboxed-pi egress proxy container.
+"""Entrypoint for the tsuba egress proxy container.
 
 Sequence:
   1. Wait for the shared network namespace to be ready.
@@ -25,9 +25,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import setup_iptables  # noqa: E402 — path manipulation required above
 
 
-POLICY_FILE = sys.argv[1] if len(sys.argv) > 1 else "/etc/sandboxed-pi/policy.yaml"
+POLICY_FILE = sys.argv[1] if len(sys.argv) > 1 else "/etc/tsuba/policy.yaml"
 PROXY_PORT = 8080
-MARKER_FILE = Path("/var/run/sandboxed-pi/proxy-ready")
+MARKER_FILE = Path("/var/run/tsuba/proxy-ready")
 CERT_DIR = "/root/.mitmproxy"
 CERT_FILE = Path(CERT_DIR) / "mitmproxy-ca-cert.pem"
 

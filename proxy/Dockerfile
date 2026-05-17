@@ -1,4 +1,4 @@
-# Egress proxy container for sandboxed-pi
+# Egress proxy container for tsuba
 #
 # This image runs mitmproxy with a policy addon that enforces an allowlist
 # on outbound HTTP/HTTPS traffic. All TCP 80/443 from the workload container
@@ -22,8 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directories for policy and audit log
-RUN mkdir -p /etc/sandboxed-pi /var/log/sandboxed-pi /var/run/sandboxed-pi
-RUN chmod 755 /etc/sandboxed-pi /var/log/sandboxed-pi /var/run/sandboxed-pi
+RUN mkdir -p /etc/tsuba /var/log/tsuba /var/run/tsuba
+RUN chmod 755 /etc/tsuba /var/log/tsuba /var/run/tsuba
 
 # Copy the policy addon and iptables setup script
 COPY policy.py /usr/local/bin/policy.py

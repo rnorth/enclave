@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * enclave: run any program inside an ephemeral Docker container.
+ * tsuba: run any program inside an ephemeral Docker container.
  *
- * Usage: enclave -- <program> [args...]
+ * Usage: tsuba -- <program> [args...]
  *
- * Config: ~/.config/enclave/config.yaml
+ * Config: ~/.config/tsuba/config.yaml
  */
 
 import { spawn } from "node:child_process";
@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 import { homedir } from "node:os";
 import { parseArgv, UsageError } from "./argv.js";
 import { loadConfig, ConfigError, type Config } from "./config.js";
-import { buildEnclaveImage } from "./image.js";
+import { buildTsubaImage } from "./image.js";
 import {
   createSandboxContainer,
   destroySandboxContainer,
@@ -24,7 +24,7 @@ import {
   tailAuditLog,
 } from "./egress.js";
 
-const DEFAULT_CONFIG_PATH = resolve(homedir(), ".config", "enclave", "config.yaml");
+const DEFAULT_CONFIG_PATH = resolve(homedir(), ".config", "tsuba", "config.yaml");
 
 async function main(): Promise<number> {
   let parsed;
@@ -43,7 +43,7 @@ async function main(): Promise<number> {
     config = loadConfig(DEFAULT_CONFIG_PATH);
   } catch (err) {
     if (err instanceof ConfigError) {
-      console.error(`[enclave] ${err.message}`);
+      console.error(`[tsuba] ${err.message}`);
       return 2;
     }
     throw err;
@@ -53,10 +53,10 @@ async function main(): Promise<number> {
   // proxy boots in default-deny mode (everything blocked).
   if (config.defaultDenyActive()) {
     console.error(
-      "[enclave] No networkPolicies in config — all outbound HTTP/HTTPS will be blocked.",
+      "[tsuba] No networkPolicies in config — all outbound HTTP/HTTPS will be blocked.",
     );
     console.error(
-      `[enclave] To allow specific hosts, add a networkPolicies section to ${DEFAULT_CONFIG_PATH}.`,
+      `[tsuba] To allow specific hosts, add a networkPolicies section to ${DEFAULT_CONFIG_PATH}.`,
     );
   }
 
@@ -64,7 +64,7 @@ async function main(): Promise<number> {
     await dockerExecRaw(["info", "--format", "{{.OSType}}"]);
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);
-    console.error(`[enclave] Docker daemon not reachable: ${cause}`);
+    console.error(`[tsuba] Docker daemon not reachable: ${cause}`);
     return 1;
   }
 
@@ -74,28 +74,28 @@ async function main(): Promise<number> {
   let cleanupPolicyFile: (() => void) | undefined;
 
   try {
-    const imageName = await buildEnclaveImage(config.image);
+    const imageName = await buildTsubaImage(config.image);
     workload = await createSandboxContainer(imageName, process.cwd());
 
     // Always run an egress proxy: an explicit policy when present, a
-    // default-deny empty-policy otherwise. ENCLAVE_PROXY_IMAGE lets
+    // default-deny empty-policy otherwise. TSUBA_PROXY_IMAGE lets
     // local dev/test override the ghcr.io image — useful when working
     // on a branch where no proxy image is published for the current
     // version yet.
     const policy = { networkPolicies: config.networkPolicies ?? [] };
-    const proxyImageOverride = process.env.ENCLAVE_PROXY_IMAGE || undefined;
+    const proxyImageOverride = process.env.TSUBA_PROXY_IMAGE || undefined;
     const proxyResult = await createProxyContainerFromPolicy(policy, workload, proxyImageOverride);
     proxy = proxyResult.proxyContainer;
     cleanupPolicyFile = proxyResult.cleanup;
 
     auditTailer = tailAuditLog(proxy, (line) => {
-      console.error(`[enclave] [egress] ${line}`);
+      console.error(`[tsuba] [egress] ${line}`);
     });
 
     return await runInside(workload, parsed.innerCommand);
   } catch (err) {
     const cause = err instanceof Error ? err.message : String(err);
-    console.error(`[enclave] ${cause}`);
+    console.error(`[tsuba] ${cause}`);
     return 1;
   } finally {
     if (auditTailer) auditTailer.abort();
@@ -107,7 +107,7 @@ async function main(): Promise<number> {
         await destroyProxyContainer(proxy);
       } catch (err) {
         const cause = err instanceof Error ? err.message : String(err);
-        console.error(`[enclave] cleanup: failed to destroy proxy ${proxy}: ${cause}`);
+        console.error(`[tsuba] cleanup: failed to destroy proxy ${proxy}: ${cause}`);
       }
     }
     if (workload) {
@@ -115,7 +115,7 @@ async function main(): Promise<number> {
         await destroySandboxContainer(workload);
       } catch (err) {
         const cause = err instanceof Error ? err.message : String(err);
-        console.error(`[enclave] cleanup: failed to destroy workload ${workload}: ${cause}`);
+        console.error(`[tsuba] cleanup: failed to destroy workload ${workload}: ${cause}`);
       }
     }
     if (cleanupPolicyFile) cleanupPolicyFile();
@@ -168,7 +168,7 @@ function runInside(containerName: string, command: string[]): Promise<number> {
 main().then(
   (code) => process.exit(code),
   (err) => {
-    console.error("[enclave] unexpected error:", err);
+    console.error("[tsuba] unexpected error:", err);
     process.exit(1);
   },
 );

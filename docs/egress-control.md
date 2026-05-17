@@ -26,11 +26,11 @@ Considered proxy alternatives:
 ## How it works
 
 ```
-enclave -- <program>
+tsuba -- <program>
   ├── workload container starts (cwd mounted, host user)
   ├── proxy container starts (NET_ADMIN, mitmproxy + iptables in entrypoint)
   │     with --network container:<workload>  (shared netns)
-  ├── enclave serialises config.networkPolicies to a temp policy.yaml
+  ├── tsuba serialises config.networkPolicies to a temp policy.yaml
   │     and mounts it into the proxy
   └── iptables REDIRECT inside that netns sends TCP 80/443 to mitmproxy:8080
         (--uid-owner exempts the proxy's own upstream traffic)
@@ -39,17 +39,17 @@ docker exec workload <program>
   → kernel redirects sockets to mitmproxy (transparent, ignores HTTP_PROXY)
     → policy evaluation (ALLOW/DENY rules; default-deny → 403)
     → TLS-terminate, re-encrypt to upstream
-    → audit log written to /var/log/sandboxed-pi/audit.log
+    → audit log written to /var/log/tsuba/audit.log
 ```
 
-The audit log is tailed and printed to enclave's stderr as requests are processed. (The proxy image internally still writes under `/var/log/sandboxed-pi/` — the proxy module hasn't been renamed yet.)
+The audit log is tailed and printed to tsuba's stderr as requests are processed.
 
 Components:
 
 - **Proxy image** (`proxy/Dockerfile`) — `mitmproxy/mitmproxy` base, runs as non-root, installs iptables rules in the entrypoint.
 - **Policy addon** (`proxy/policy.py`) — loaded with `mitmdump -s`. Evaluates the policy file and writes a structured JSON audit log.
 - **Workload container** — runs the user's program, plus (a) trusts the mitmproxy CA via `update-ca-certificates`, (b) launched with `--network container:<proxy>`.
-- **Activation** — always-on. If the proxy fails to come up, enclave fails closed — same semantics as [container sandbox fail-closed](./container-sandbox.md#fail-closed).
+- **Activation** — always-on. If the proxy fails to come up, tsuba fails closed — same semantics as [container sandbox fail-closed](./container-sandbox.md#fail-closed).
 
 ## Policy file format
 

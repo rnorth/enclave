@@ -1,5 +1,5 @@
 /**
- * Loads and validates ~/.config/enclave/config.yaml.
+ * Loads and validates ~/.config/tsuba/config.yaml.
  *
  * On success: returns a typed Config object with helpers.
  * On failure: throws ConfigError with a `code` discriminator the CLI
