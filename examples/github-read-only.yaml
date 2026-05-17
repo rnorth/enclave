@@ -1,4 +1,4 @@
-# Example egress policy for sandboxed-pi
+# Example egress policy for tsuba
 #
 # Policy format: networkPolicies array with host + ordered rules.
 # Last matching rule wins (like iptables).

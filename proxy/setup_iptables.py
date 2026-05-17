@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Apply iptables egress rules for the sandboxed-pi proxy sidecar.
+"""Apply iptables egress rules for the tsuba proxy sidecar.
 
 Usage: setup_iptables.py <proxy_port>
 
-Creates a SANDBOXED_PI chain in the nat and filter tables (IPv4) and
+Creates a TSUBA chain in the nat and filter tables (IPv4) and
 in ip6tables (IPv6), then wires it into OUTPUT.
 
 Design notes:
@@ -48,13 +48,13 @@ def _ip6t(*args: str, check: bool = True) -> None:
 
 def teardown() -> None:
     print("[iptables] Removing rules...", file=sys.stderr)
-    _ipt("-t", "nat", "-F", "SANDBOXED_PI", check=False)
-    _ipt("-t", "filter", "-D", "OUTPUT", "-j", "SANDBOXED_PI", check=False)
-    _ipt("-t", "filter", "-F", "SANDBOXED_PI", check=False)
-    _ipt("-t", "filter", "-X", "SANDBOXED_PI", check=False)
-    _ip6t("-D", "OUTPUT", "-j", "SANDBOXED_PI", check=False)
-    _ip6t("-F", "SANDBOXED_PI", check=False)
-    _ip6t("-X", "SANDBOXED_PI", check=False)
+    _ipt("-t", "nat", "-F", "TSUBA", check=False)
+    _ipt("-t", "filter", "-D", "OUTPUT", "-j", "TSUBA", check=False)
+    _ipt("-t", "filter", "-F", "TSUBA", check=False)
+    _ipt("-t", "filter", "-X", "TSUBA", check=False)
+    _ip6t("-D", "OUTPUT", "-j", "TSUBA", check=False)
+    _ip6t("-F", "TSUBA", check=False)
+    _ip6t("-X", "TSUBA", check=False)
     print("[iptables] Rules removed.", file=sys.stderr)
 
 
@@ -62,44 +62,44 @@ def setup(proxy_port: int) -> None:
     print(f"[iptables] Setting up rules (proxy port {proxy_port})...", file=sys.stderr)
 
     # NAT: redirect HTTP/HTTPS from non-root through mitmproxy
-    _ipt("-t", "nat", "-N", "SANDBOXED_PI", check=False)
-    _ipt("-t", "nat", "-F", "SANDBOXED_PI")
-    _ipt("-t", "nat", "-A", "OUTPUT", "-j", "SANDBOXED_PI")
+    _ipt("-t", "nat", "-N", "TSUBA", check=False)
+    _ipt("-t", "nat", "-F", "TSUBA")
+    _ipt("-t", "nat", "-A", "OUTPUT", "-j", "TSUBA")
     for port in [80, 443]:
-        _ipt("-t", "nat", "-A", "SANDBOXED_PI",
+        _ipt("-t", "nat", "-A", "TSUBA",
              "-p", "tcp", "--dport", str(port),
              "-m", "owner", "!", "--uid-owner", "root",
              "-j", "REDIRECT", "--to-port", str(proxy_port))
 
     # Intercept non-root UDP 53 → DNS interceptor
-    _ipt("-t", "nat", "-A", "SANDBOXED_PI",
+    _ipt("-t", "nat", "-A", "TSUBA",
          "-p", "udp", "--dport", "53",
          "-m", "owner", "!", "--uid-owner", "root",
          "-j", "REDIRECT", "--to-port", str(_DNS_INTERCEPTOR_PORT))
 
     # Filter: block non-root traffic not going through the proxy
-    _ipt("-t", "filter", "-N", "SANDBOXED_PI", check=False)
-    _ipt("-t", "filter", "-F", "SANDBOXED_PI")
-    _ipt("-t", "filter", "-A", "OUTPUT", "-j", "SANDBOXED_PI")
-    _ipt("-t", "filter", "-A", "SANDBOXED_PI", "-m", "owner", "--uid-owner", "root", "-j", "RETURN")
-    _ipt("-t", "filter", "-A", "SANDBOXED_PI", "-o", "lo", "-j", "RETURN")
+    _ipt("-t", "filter", "-N", "TSUBA", check=False)
+    _ipt("-t", "filter", "-F", "TSUBA")
+    _ipt("-t", "filter", "-A", "OUTPUT", "-j", "TSUBA")
+    _ipt("-t", "filter", "-A", "TSUBA", "-m", "owner", "--uid-owner", "root", "-j", "RETURN")
+    _ipt("-t", "filter", "-A", "TSUBA", "-o", "lo", "-j", "RETURN")
     # After a NAT REDIRECT the filter chain evaluates the packet with the rewritten
     # destination port but before the kernel commits the reroute to loopback.
     # The "-o lo" rule above does NOT match at this point, so we must explicitly
     # allow packets headed for each redirected local port.
-    _ipt("-t", "filter", "-A", "SANDBOXED_PI",
+    _ipt("-t", "filter", "-A", "TSUBA",
          "-p", "tcp", "--dport", str(proxy_port), "-d", "127.0.0.1", "-j", "RETURN")
-    _ipt("-t", "filter", "-A", "SANDBOXED_PI",
+    _ipt("-t", "filter", "-A", "TSUBA",
          "-p", "udp", "--dport", str(_DNS_INTERCEPTOR_PORT), "-d", "127.0.0.1", "-j", "RETURN")
-    _ipt("-t", "filter", "-A", "SANDBOXED_PI", "-j", "DROP")
+    _ipt("-t", "filter", "-A", "TSUBA", "-j", "DROP")
 
     # IPv6: block all non-root outbound
-    _ip6t("-N", "SANDBOXED_PI", check=False)
-    _ip6t("-F", "SANDBOXED_PI")
-    _ip6t("-A", "OUTPUT", "-j", "SANDBOXED_PI")
-    _ip6t("-A", "SANDBOXED_PI", "-m", "owner", "--uid-owner", "root", "-j", "RETURN")
-    _ip6t("-A", "SANDBOXED_PI", "-o", "lo", "-j", "RETURN")
-    _ip6t("-A", "SANDBOXED_PI", "-j", "DROP")
+    _ip6t("-N", "TSUBA", check=False)
+    _ip6t("-F", "TSUBA")
+    _ip6t("-A", "OUTPUT", "-j", "TSUBA")
+    _ip6t("-A", "TSUBA", "-m", "owner", "--uid-owner", "root", "-j", "RETURN")
+    _ip6t("-A", "TSUBA", "-o", "lo", "-j", "RETURN")
+    _ip6t("-A", "TSUBA", "-j", "DROP")
 
     print("[iptables] Rules installed.", file=sys.stderr)
 

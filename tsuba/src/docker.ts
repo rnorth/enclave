@@ -17,14 +17,14 @@ import { randomUUID } from "node:crypto";
  * Create and start a sandbox container.
  * Mounts cwd at the same absolute path inside the container.
  * The caller is responsible for supplying a pre-built image (e.g. via
- * image.ts:buildEnclaveImage) that contains a user matching the host UID/GID.
+ * image.ts:buildTsubaImage) that contains a user matching the host UID/GID.
  */
 export async function createSandboxContainer(
   image: string,
   cwd: string,
   containerName?: string,
 ): Promise<string> {
-  const name = containerName ?? `enclave-sandbox-${randomUUID().slice(0, 8)}`;
+  const name = containerName ?? `tsuba-sandbox-${randomUUID().slice(0, 8)}`;
 
   const dockerArgs = [
     "run",

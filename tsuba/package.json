@@ -1,13 +1,12 @@
 {
-  "name": "enclave",
+  "name": "@rnorth/tsuba",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Docker container sandbox CLI — run any program inside an ephemeral container with optional egress filtering",
   "keywords": ["sandbox", "docker", "egress", "containment"],
   "license": "MIT",
   "bin": {
-    "enclave": "dist/src/index.js"
+    "tsuba": "dist/src/index.js"
   },
   "scripts": {
     "build": "tsc",

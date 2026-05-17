@@ -33,8 +33,8 @@ pi --egress-policy ./examples/github-read-only.yaml
 3. Watch the audit log for blocked requests (printed to stderr or visible in the pi UI):
 
    ```
-   [sandboxed-pi] [egress] {"timestamp":"...","decision":"ALLOW","host":"api.github.com","path":"/repos/..."}
-   [sandboxed-pi] [egress] {"timestamp":"...","decision":"DENY","host":"evil.example.com","path":"/..."}
+   [tsuba] [egress] {"timestamp":"...","decision":"ALLOW","host":"api.github.com","path":"/repos/..."}
+   [tsuba] [egress] {"timestamp":"...","decision":"DENY","host":"evil.example.com","path":"/..."}
    ```
 
 ### Pattern tips

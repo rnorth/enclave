@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-mitmproxy policy addon for sandboxed-pi.
+mitmproxy policy addon for tsuba.
 Implements host+path allowlist enforcement and structured audit logging.
 
 Usage:
@@ -78,7 +78,7 @@ class PolicyAddon:
     def __init__(self):
         self.policy_file = ""
         self.network_policies: list[dict] = []
-        self._audit_log_path = "/var/log/sandboxed-pi/audit.log"
+        self._audit_log_path = "/var/log/tsuba/audit.log"
         self._allowed_hosts: frozenset = frozenset()
         self._binding_cache: BindingCache = BindingCache()
         self._audit_lock: threading.Lock = threading.Lock()
@@ -220,7 +220,7 @@ class PolicyAddon:
         )
         self._dns_interceptor.start()
         if not self._allowed_hosts:
-            ctx.log.warn("[sandboxed-pi] DNS interceptor started with empty allowlist — all DNS queries will return NXDOMAIN")
+            ctx.log.warn("[tsuba] DNS interceptor started with empty allowlist — all DNS queries will return NXDOMAIN")
         threading.Thread(
             target=self._dns_watchdog,
             daemon=True,
@@ -232,7 +232,7 @@ class PolicyAddon:
             return
         self._dns_interceptor.join()
         # DNS interceptor thread died unexpectedly — fail closed
-        print("[sandboxed-pi] DNS interceptor thread died, shutting down", file=sys.stderr)
+        print("[tsuba] DNS interceptor thread died, shutting down", file=sys.stderr)
         os._exit(1)
 
     def _check_policy(self, host: str, path: str, method: str) -> Optional[str]:

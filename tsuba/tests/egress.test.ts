@@ -33,7 +33,7 @@ const {
 // Policy file helpers
 // ---------------------------------------------------------------------------
 
-const tmpDir = "/tmp/sandboxed-pi-test-policy";
+const tmpDir = "/tmp/tsuba-test-policy";
 const tmpPolicyPath = resolve(tmpDir, "policy.yaml");
 
 function writePolicy(content: string) {
@@ -63,9 +63,9 @@ describe("resolveProxyImage", () => {
     const result = await resolveProxyImage();
 
     expect(mockDockerExecRaw).toHaveBeenCalledWith(
-      expect.arrayContaining(["pull", expect.stringMatching(/^ghcr\.io\/rnorth\/sandboxed-pi\/proxy:\d+\.\d+\.\d+$/)]),
+      expect.arrayContaining(["pull", expect.stringMatching(/^ghcr\.io\/rnorth\/tsuba\/proxy:\d+\.\d+\.\d+$/)]),
     );
-    expect(result).toMatch(/^ghcr\.io\/rnorth\/sandboxed-pi\/proxy:\d+\.\d+\.\d+$/);
+    expect(result).toMatch(/^ghcr\.io\/rnorth\/tsuba\/proxy:\d+\.\d+\.\d+$/);
   });
 
   it("throws when the pull fails", async () => {

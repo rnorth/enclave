@@ -1,32 +1,32 @@
-# enclave
+# tsuba
 
 Run any command inside an ephemeral Docker container, with optional egress filtering.
 
 ```
-$ enclave -- pi
+$ tsuba -- pi
 ```
 
-The supplied command runs inside a one-shot Docker container built from enclave's curated Ubuntu base (git, gh, docker CLI, jq, ripgrep, build tools, [mise](https://mise.jdx.dev/), …). The working directory is mounted at the same absolute path, the container runs as your host user (non-root, matching UID/GID), and outbound HTTP/HTTPS is filtered through a mitmproxy sidecar according to a policy in your config file.
+The supplied command runs inside a one-shot Docker container built from tsuba's curated Ubuntu base (git, gh, docker CLI, jq, ripgrep, build tools, [mise](https://mise.jdx.dev/), …). The working directory is mounted at the same absolute path, the container runs as your host user (non-root, matching UID/GID), and outbound HTTP/HTTPS is filtered through a mitmproxy sidecar according to a policy in your config file.
 
 ## Philosophy
 
 **Containment, not just isolation.** Every filesystem operation, every shell command, every subprocess your program spawns happens inside a container that is created on invocation and destroyed when the program exits.
 
-**Fail-closed network.** A config with no `networkPolicies` means no outbound HTTP/HTTPS, not "everything allowed." enclave warns you at startup so you can add policies if you want them.
+**Fail-closed network.** A config with no `networkPolicies` means no outbound HTTP/HTTPS, not "everything allowed." tsuba warns you at startup so you can add policies if you want them.
 
-**Generic.** enclave wraps any program; there is no special integration with the wrapped tool.
+**Generic.** tsuba wraps any program; there is no special integration with the wrapped tool.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/rnorth/sandboxed-pi ~/code/enclave
-cd ~/code/enclave/enclave
+git clone https://github.com/rnorth/tsuba ~/code/tsuba
+cd ~/code/tsuba/tsuba
 npm install
 npm run build
-npm link    # installs `enclave` globally
+npm link    # installs `tsuba` globally
 
-mkdir -p ~/.config/enclave
-cat > ~/.config/enclave/config.yaml <<'YAML'
+mkdir -p ~/.config/tsuba
+cat > ~/.config/tsuba/config.yaml <<'YAML'
 networkPolicies:
   - host: api.github.com
     policies:
@@ -35,14 +35,14 @@ networkPolicies:
         method: GET
 YAML
 
-enclave -- pi
+tsuba -- pi
 ```
 
-On first run, enclave builds its curated base image — takes a few minutes, then it's cached for every subsequent invocation.
+On first run, tsuba builds its curated base image — takes a few minutes, then it's cached for every subsequent invocation.
 
 ### Language runtimes
 
-The curated image ships [mise](https://mise.jdx.dev/) but **no language runtimes**. Keep your project's runtime versions in a checked-in `.mise.toml` and bring them in at the start of each enclave session:
+The curated image ships [mise](https://mise.jdx.dev/) but **no language runtimes**. Keep your project's runtime versions in a checked-in `.mise.toml` and bring them in at the start of each tsuba session:
 
 ```toml
 # .mise.toml
@@ -52,17 +52,17 @@ python = "3.12"
 ```
 
 ```bash
-enclave -- bash -c "mise install && pi"
+tsuba -- bash -c "mise install && pi"
 ```
 
 Container teardown is total — `mise install` results don't persist across invocations.
 
 ## Configuration
 
-`~/.config/enclave/config.yaml`:
+`~/.config/tsuba/config.yaml`:
 
 ```yaml
-image: <docker image>          # optional; defaults to enclave's curated base image
+image: <docker image>          # optional; defaults to tsuba's curated base image
 networkPolicies:               # optional; missing/empty == default-deny
   - host: <hostname>
     policies:
@@ -80,14 +80,14 @@ See [`docs/egress-control.md`](./docs/egress-control.md) for the full policy sem
 Two independent modules:
 
 ```
-sandboxed-pi/
-├── enclave/    # The CLI (Node/TS) — run `npm test` from inside
+tsuba/
+├── tsuba/    # The CLI (Node/TS) — run `npm test` from inside
 └── proxy/      # The mitmproxy egress sidecar (Python + Docker image)
 ```
 
 See [`docs/architecture.md`](./docs/architecture.md) for an overview and links to the feature docs.
 
 ```bash
-cd enclave && npm test           # CLI + integration tests
+cd tsuba && npm test           # CLI + integration tests
 sh scripts/test-proxy.sh         # proxy tests (Python/pytest)
 ```

@@ -1,5 +1,5 @@
 /**
- * End-to-end integration test for the enclave CLI.
+ * End-to-end integration test for the tsuba CLI.
  *
  * Builds the binary, invokes it against a real Docker daemon with a
  * temporary HOME so we do not stomp on the developer's real config,
@@ -27,17 +27,17 @@ function isDockerAvailable(): boolean {
 
 const DOCKER_AVAILABLE = isDockerAvailable();
 
-describe.runIf(DOCKER_AVAILABLE)("enclave end-to-end", { timeout: 600_000 }, () => {
+describe.runIf(DOCKER_AVAILABLE)("tsuba end-to-end", { timeout: 600_000 }, () => {
   const here = dirname(fileURLToPath(import.meta.url));
-  const enclaveRoot = resolve(here, "..");
-  const binPath = resolve(enclaveRoot, "dist", "src", "index.js");
+  const tsubaRoot = resolve(here, "..");
+  const binPath = resolve(tsubaRoot, "dist", "src", "index.js");
 
   let tmpHome: string;
-  const testProxyImage = "enclave-proxy:test";
+  const testProxyImage = "tsuba-proxy:test";
 
   beforeAll(() => {
     // Build the binary.
-    execSync("npm run build", { cwd: enclaveRoot, stdio: "pipe" });
+    execSync("npm run build", { cwd: tsubaRoot, stdio: "pipe" });
 
     // Build a local proxy image so we don't depend on a published
     // ghcr.io tag (a branch's package.json version often won't have a
@@ -46,12 +46,12 @@ describe.runIf(DOCKER_AVAILABLE)("enclave end-to-end", { timeout: 600_000 }, () 
     try {
       execSync(`docker image inspect ${testProxyImage} > /dev/null`, { stdio: "pipe" });
     } catch {
-      execSync(`docker build -t ${testProxyImage} ../proxy`, { cwd: enclaveRoot, stdio: "pipe" });
+      execSync(`docker build -t ${testProxyImage} ../proxy`, { cwd: tsubaRoot, stdio: "pipe" });
     }
 
     // Isolated HOME so we read our test config, not the developer's.
-    tmpHome = mkdtempSync(resolve(tmpdir(), "enclave-e2e-"));
-    mkdirSync(resolve(tmpHome, ".config", "enclave"), { recursive: true });
+    tmpHome = mkdtempSync(resolve(tmpdir(), "tsuba-e2e-"));
+    mkdirSync(resolve(tmpHome, ".config", "tsuba"), { recursive: true });
   });
 
   afterAll(() => {
@@ -63,7 +63,7 @@ describe.runIf(DOCKER_AVAILABLE)("enclave end-to-end", { timeout: 600_000 }, () 
   });
 
   function writeConfig(yaml: string) {
-    writeFileSync(resolve(tmpHome, ".config", "enclave", "config.yaml"), yaml, "utf-8");
+    writeFileSync(resolve(tmpHome, ".config", "tsuba", "config.yaml"), yaml, "utf-8");
   }
 
   function runEnclave(args: string[]) {
@@ -71,9 +71,9 @@ describe.runIf(DOCKER_AVAILABLE)("enclave end-to-end", { timeout: 600_000 }, () 
       env: {
         ...process.env,
         HOME: tmpHome,
-        ENCLAVE_PROXY_IMAGE: testProxyImage,
+        TSUBA_PROXY_IMAGE: testProxyImage,
       },
-      cwd: enclaveRoot,
+      cwd: tsubaRoot,
       encoding: "utf-8",
     });
   }
@@ -82,11 +82,11 @@ describe.runIf(DOCKER_AVAILABLE)("enclave end-to-end", { timeout: 600_000 }, () 
     writeConfig(`image: ubuntu:24.04\n`);
     const result = runEnclave(["echo", "hi"]);
     expect(result.status).toBe(2);
-    expect(result.stderr).toContain("enclave -- <program>");
+    expect(result.stderr).toContain("tsuba -- <program>");
   });
 
   it("exits 2 with example config when config is missing", () => {
-    rmSync(resolve(tmpHome, ".config", "enclave", "config.yaml"), { force: true });
+    rmSync(resolve(tmpHome, ".config", "tsuba", "config.yaml"), { force: true });
     const result = runEnclave(["--", "echo", "hi"]);
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("No config at");

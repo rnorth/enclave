@@ -1,6 +1,6 @@
-# enclave: Architecture
+# tsuba: Architecture
 
-`enclave` runs a user-supplied program inside an ephemeral Docker container. The entire program lives in the container — there is no host-side tool interception. This document is a high-level orientation; each feature has its own doc.
+`tsuba` runs a user-supplied program inside an ephemeral Docker container. The entire program lives in the container — there is no host-side tool interception. This document is a high-level orientation; each feature has its own doc.
 
 ## Philosophy
 
@@ -13,11 +13,11 @@
 ## Invocation overview
 
 ```
-enclave -- pi
-  ├── load + validate ~/.config/enclave/config.yaml
+tsuba -- pi
+  ├── load + validate ~/.config/tsuba/config.yaml
   ├── warn if no networkPolicies (default-deny in effect)
-  ├── build curated base image if missing (cached as enclave-base:dev)
-  ├── build per-user image on top (cached as enclave-<user>:<uid>)
+  ├── build curated base image if missing (cached as tsuba-base:latest)
+  ├── build per-user image on top (cached as tsuba-<user>:<uid>)
   ├── docker create workload (cwd mounted, --user UID:GID)
   ├── docker create proxy (NET_ADMIN, shared netns, in-memory policy)
   ├── install proxy CA cert in workload, start audit-log tail → stderr

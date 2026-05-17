@@ -1,13 +1,13 @@
 /**
- * Argv parsing for the enclave CLI.
+ * Argv parsing for the tsuba CLI.
  *
- *   enclave -- <program> [args...]
+ *   tsuba -- <program> [args...]
  *
- * v1: no flags on enclave itself; the '--' separator is mandatory and
+ * v1: no flags on tsuba itself; the '--' separator is mandatory and
  * the inner command must be non-empty.
  */
 
-const USAGE = "Usage: enclave -- <program> [args...]";
+const USAGE = "Usage: tsuba -- <program> [args...]";
 
 export class UsageError extends Error {
   constructor(message: string) {
@@ -32,7 +32,7 @@ export function parseArgv(argv: string[]): ParsedArgv {
     throw new UsageError("missing '--' separator");
   }
   if (sepIndex !== 0) {
-    throw new UsageError("enclave does not accept arguments before '--' in v1");
+    throw new UsageError("tsuba does not accept arguments before '--' in v1");
   }
 
   const innerCommand = userArgs.slice(sepIndex + 1);

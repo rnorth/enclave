@@ -140,4 +140,4 @@ class DnsInterceptor:
                     f.write(entry + "\n")
             except OSError as e:
                 import sys
-                print(f"[sandboxed-pi] audit write failed: {e}", file=sys.stderr)
+                print(f"[tsuba] audit write failed: {e}", file=sys.stderr)

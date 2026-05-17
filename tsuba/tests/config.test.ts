@@ -7,7 +7,7 @@ import { loadConfig, ConfigError } from "../src/config.js";
 let tmp: string;
 
 beforeEach(() => {
-  tmp = resolve(tmpdir(), `enclave-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  tmp = resolve(tmpdir(), `tsuba-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   mkdirSync(tmp, { recursive: true });
 });
 

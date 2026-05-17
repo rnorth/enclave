@@ -199,7 +199,7 @@ describe.runIf(DOCKER_AVAILABLE)("createSandboxContainer", () => {
       testCwd,
     );
 
-    expect(containerName).toMatch(/^enclave-sandbox-/);
+    expect(containerName).toMatch(/^tsuba-sandbox-/);
 
     await destroySandboxContainer(containerName);
   });
@@ -258,7 +258,7 @@ describe.runIf(DOCKER_AVAILABLE)("egress proxy – DNS interception", { timeout:
   const workloadImage = "ghcr.io/catthehacker/ubuntu:act-latest";
   const suffix = Date.now();
   const workloadName = `test-dns-workload-${suffix}`;
-  const policyDir = `/tmp/sandboxed-pi-dns-test-${suffix}`;
+  const policyDir = `/tmp/tsuba-dns-test-${suffix}`;
   const policyPath = resolve(policyDir, "policy.yaml");
 
   beforeAll(async () => {

@@ -20,10 +20,10 @@ import { dockerExecRaw, isContainerRunning } from "./docker.js";
 // Proxy container image
 // ---------------------------------------------------------------------------
 
-const PROXY_IMAGE_REPO = "ghcr.io/rnorth/sandboxed-pi/proxy";
+const PROXY_IMAGE_REPO = "ghcr.io/rnorth/tsuba/proxy";
 
 function getPackageVersion(): string {
-  // package.json lives at enclave/package.json. From src/egress.ts the
+  // package.json lives at tsuba/package.json. From src/egress.ts the
   // relative path is ../package.json; from the compiled dist/src/egress.js
   // it is ../../package.json. Probe both so the lookup works in either
   // mode (vitest/tsx source vs installed bin).
@@ -36,14 +36,14 @@ function getPackageVersion(): string {
       // try next candidate
     }
   }
-  throw new Error("[enclave] could not locate package.json");
+  throw new Error("[tsuba] could not locate package.json");
 }
 
 /**
  * Resolve the proxy image to use.
  *
  * If `proxyImage` is provided (via --proxy-image flag), use it as-is.
- * Otherwise ensure ghcr.io/rnorth/sandboxed-pi/proxy:<version> is available
+ * Otherwise ensure ghcr.io/rnorth/tsuba/proxy:<version> is available
  * locally: skip the pull if already present, pull if missing, and throw if the
  * pull fails. This avoids unnecessary registry round-trips and works in
  * offline/air-gapped environments when the image is already cached.
@@ -96,7 +96,7 @@ export async function createProxyContainer(
   workloadContainerName: string,
   proxyImageOverride?: string,
 ): Promise<string> {
-  const proxyContainerName = `pi-egress-proxy-${randomUUID().slice(0, 8)}`;
+  const proxyContainerName = `tsuba-proxy-${randomUUID().slice(0, 8)}`;
   const image = await resolveProxyImage(proxyImageOverride);
 
   // Resolve policy file to absolute path for Docker volume mount
@@ -104,10 +104,10 @@ export async function createProxyContainer(
     ? policyFile
     : resolve(process.cwd(), policyFile);
 
-  console.error(`[sandboxed-pi] [egress] Starting proxy container: ${proxyContainerName}`);
+  console.error(`[tsuba] [egress] Starting proxy container: ${proxyContainerName}`);
 
   // Write policy to a location the proxy can read
-  const policyDest = `/etc/sandboxed-pi/policy.yaml`;
+  const policyDest = `/etc/tsuba/policy.yaml`;
 
 
   // Create and start the proxy container
@@ -115,7 +115,7 @@ export async function createProxyContainer(
   // - Shares network namespace with workload container
   // - Mount policy file
   // - Entrypoint handles iptables setup + runs mitmdump
-  console.error(`[sandboxed-pi] [egress] Creating proxy container (this may take a moment)...`);
+  console.error(`[tsuba] [egress] Creating proxy container (this may take a moment)...`);
 
   await dockerExecRaw([
     "run",
@@ -130,7 +130,7 @@ export async function createProxyContainer(
     policyDest,
   ]);
 
-  console.error(`[sandboxed-pi] [egress] Waiting for proxy to initialize (setting up iptables + CA cert)...`);
+  console.error(`[tsuba] [egress] Waiting for proxy to initialize (setting up iptables + CA cert)...`);
 
   // Wait for iptables to be set up (the entrypoint script needs a moment)
   // CA cert generation can take up to ~140s in worst case (20 retries × 7s each)
@@ -138,9 +138,9 @@ export async function createProxyContainer(
 
   // Install mitmproxy CA cert in the workload so standard TLS clients
   // (curl, gh, npm, etc.) trust the intercepted certificates.
-  console.error(`[sandboxed-pi] [egress] Installing proxy CA certificate in workload...`);
+  console.error(`[tsuba] [egress] Installing proxy CA certificate in workload...`);
   await installProxyCATrust(proxyContainerName, workloadContainerName);
-  console.error(`[sandboxed-pi] [egress] Proxy setup complete. All egress traffic will be filtered.`);
+  console.error(`[tsuba] [egress] Proxy setup complete. All egress traffic will be filtered.`);
 
   return proxyContainerName;
 }
@@ -157,7 +157,7 @@ export async function createProxyContainerFromPolicy(
   workloadContainerName: string,
   proxyImageOverride?: string,
 ): Promise<{ proxyContainer: string; cleanup: () => void }> {
-  const tmpDir = mkdtempSync(resolve(tmpdir(), "enclave-policy-"));
+  const tmpDir = mkdtempSync(resolve(tmpdir(), "tsuba-policy-"));
   const policyFile = resolve(tmpDir, "policy.yaml");
   writeFileSync(policyFile, yamlStringify(policy), "utf-8");
 
@@ -204,7 +204,7 @@ export async function installProxyCATrust(
   workloadContainerName: string,
 ): Promise<void> {
   const certPath = "/root/.mitmproxy/mitmproxy-ca-cert.pem";
-  const certDestDir = "/usr/local/share/ca-certificates/sandboxed-pi";
+  const certDestDir = "/usr/local/share/ca-certificates/tsuba";
   const certDestFile = `${certDestDir}/proxy-ca.crt`;
 
   // Export from proxy, pipe into workload, install to system trust.
@@ -226,7 +226,7 @@ export async function installProxyCATrust(
   // nothing to warn on here — keep silent on success.
   if (installResult.toString().trim() !== "") {
     // Rare: something unexpected was written to stdout. Log it.
-    console.error(`[sandboxed-pi] CA install stdout: ${installResult.toString().trim()}`);
+    console.error(`[tsuba] CA install stdout: ${installResult.toString().trim()}`);
   }
 }
 async function waitForProxyReady(name: string, timeoutMs: number): Promise<void> {
@@ -235,7 +235,7 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
   let lastLogTime = 0;
   let loggedExecFailure = false;
 
-  console.error(`[sandboxed-pi] [egress] Waiting for proxy to be ready (timeout: ${timeoutMs}ms)...`);
+  console.error(`[tsuba] [egress] Waiting for proxy to be ready (timeout: ${timeoutMs}ms)...`);
 
   while (Date.now() < deadline) {
     try {
@@ -247,13 +247,13 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
 
       if (isRunning !== "true") {
         // Container exists but is not running - get logs and fail
-        console.error(`[sandboxed-pi] [egress] Container is not running. Fetching logs...`);
+        console.error(`[tsuba] [egress] Container is not running. Fetching logs...`);
         const logsResult = await dockerExecRaw([
           "logs", "--tail", "100", name,
         ]);
         const logs = logsResult.toString();
         if (logs.trim()) {
-          console.error(`[sandboxed-pi] [egress] Container stopped. Logs:\n${logs}`);
+          console.error(`[tsuba] [egress] Container stopped. Logs:\n${logs}`);
         }
         throw new Error(`Proxy container ${name} stopped unexpectedly`);
       }
@@ -266,7 +266,7 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
         ]);
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        console.error(`[sandboxed-pi] [egress] Container not accepting commands yet: ${errMsg}`);
+        console.error(`[tsuba] [egress] Container not accepting commands yet: ${errMsg}`);
         continue;
       }
 
@@ -274,12 +274,12 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
       const result = await dockerExecRaw([
         "exec", name,
         "sh", "-c",
-        "test -f /var/run/sandboxed-pi/proxy-ready && cat /var/run/sandboxed-pi/proxy-ready",
+        "test -f /var/run/tsuba/proxy-ready && cat /var/run/tsuba/proxy-ready",
       ]);
       const status = result.toString().trim();
       if (status === "ready") {
         const elapsed = Date.now() - startTime;
-        console.error(`[sandboxed-pi] [egress] Proxy ready after ${elapsed}ms`);
+        console.error(`[tsuba] [egress] Proxy ready after ${elapsed}ms`);
         return; // Proxy is ready
       }
     } catch (err) {
@@ -289,7 +289,7 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
       // Log exec failure once at the beginning
       if (!loggedExecFailure) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        console.error(`[sandboxed-pi] [egress] Exec failed (container may still be starting): ${errMsg}`);
+        console.error(`[tsuba] [egress] Exec failed (container may still be starting): ${errMsg}`);
         loggedExecFailure = true;
       }
       // Container not ready yet, wait
@@ -299,7 +299,7 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
     const elapsed = Date.now() - startTime;
     if (elapsed - lastLogTime >= 10000) {
       lastLogTime = elapsed;
-      console.error(`[sandboxed-pi] [egress] Still waiting... (${elapsed}ms elapsed)`);
+      console.error(`[tsuba] [egress] Still waiting... (${elapsed}ms elapsed)`);
 
       // Try to fetch logs
       try {
@@ -308,7 +308,7 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
         ]);
         const logs = logsResult.toString();
         if (logs.trim()) {
-          console.error(`[sandboxed-pi] [egress] Proxy logs:\n${logs}`);
+          console.error(`[tsuba] [egress] Proxy logs:\n${logs}`);
         }
       } catch {
         // Ignore
@@ -319,19 +319,19 @@ async function waitForProxyReady(name: string, timeoutMs: number): Promise<void>
   }
 
   // On timeout, dump logs for debugging
-  console.error(`[sandboxed-pi] [egress] Timeout reached. Fetching final container logs...`);
+  console.error(`[tsuba] [egress] Timeout reached. Fetching final container logs...`);
   try {
     const logsResult = await dockerExecRaw([
       "logs", "--tail", "100", name,
     ]);
     const logs = logsResult.toString();
     if (logs.trim()) {
-      console.error(`[sandboxed-pi] [egress] Proxy container logs on timeout:\n${logs}`);
+      console.error(`[tsuba] [egress] Proxy container logs on timeout:\n${logs}`);
     } else {
-      console.error(`[sandboxed-pi] [egress] Proxy container has no logs`);
+      console.error(`[tsuba] [egress] Proxy container has no logs`);
     }
   } catch (err) {
-    console.error(`[sandboxed-pi] [egress] Failed to fetch container logs: ${err}`);
+    console.error(`[tsuba] [egress] Failed to fetch container logs: ${err}`);
   }
 
   throw new Error(`Proxy container ${name} did not become ready within ${timeoutMs}ms`);
@@ -369,7 +369,7 @@ export function tailAuditLog(
         // we reset to offset 0 on the next successful read.
         const sizeResult = await dockerExecRaw([
           "exec", containerName,
-          "sh", "-c", "stat -c %s /var/log/sandboxed-pi/audit.log 2>/dev/null || echo 0",
+          "sh", "-c", "stat -c %s /var/log/tsuba/audit.log 2>/dev/null || echo 0",
         ]);
         const currentSize = parseInt(sizeResult.toString().trim(), 10) || 0;
 
@@ -387,7 +387,7 @@ export function tailAuditLog(
         // Read from byteOffset onward
         const result = await dockerExecRaw([
           "exec", "-i", containerName,
-          "sh", "-c", `tail -c +${byteOffset + 1} /var/log/sandboxed-pi/audit.log`,
+          "sh", "-c", `tail -c +${byteOffset + 1} /var/log/tsuba/audit.log`,
         ]);
 
         const newContent = result.toString();
